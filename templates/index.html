@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Job Matcher Pro — Find Your Perfect Career</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <div class="logo-icon">🤖</div>
+                <span class="logo-text">AI Job Matcher <span class="pro-badge">PRO</span></span>
+            </div>
+            <div class="nav-links">
+                <a href="#how-it-works">How It Works</a>
+                <a href="#features">Features</a>
+                <a href="/about">About</a>
+                <a href="#upload-section" class="nav-cta">Try Free →</a>
+                <a href="/logout" style="color:#fc8181; margin-left:1rem;">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-bg">
+            <div class="hero-orb orb1"></div>
+            <div class="hero-orb orb2"></div>
+            <div class="hero-orb orb3"></div>
+        </div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="badge-dot"></span>
+                AI-Powered Career Matching
+            </div>
+            <h1 class="hero-title">
+                Find Your <span class="gradient-text">Perfect Job</span><br>
+                Match in 30 Seconds
+            </h1>
+            <p class="hero-subtitle">
+                Upload your resume and let AI analyze your skills, match you with the best jobs,
+                and show you exactly what to learn to get your dream career.
+            </p>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-num">20+</span>
+                    <span class="stat-label">Job Categories</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-num">30s</span>
+                    <span class="stat-label">Analysis Time</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat">
+                    <span class="stat-num">AI</span>
+                    <span class="stat-label">Powered</span>
+                </div>
+            </div>
+            <a href="#upload-section" class="hero-cta">
+                <i class="fas fa-rocket"></i>
+                Analyze My Resume — It's Free
+            </a>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Simple Process</span>
+                <h2>How It Works</h2>
+                <p>3 simple steps to find your perfect career match</p>
+            </div>
+            <div class="steps-grid">
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <div class="step-icon">📄</div>
+                    <h3>Upload Resume</h3>
+                    <p>Upload your PDF resume. Our system securely reads your experience and skills.</p>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <div class="step-icon">🤖</div>
+                    <h3>AI Analysis</h3>
+                    <p>Advanced AI analyzes your skills, experience, and matches with 20+ job categories.</p>
+                </div>
+                <div class="step-arrow">→</div>
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <div class="step-icon">🎯</div>
+                    <h3>Get Results</h3>
+                    <p>See your top job matches with match percentage and personalized skill gap advice.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Upload Section -->
+    <section class="upload-section" id="upload-section">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Get Started</span>
+                <h2>Analyze Your Resume</h2>
+                <p>Upload your PDF resume and get instant AI-powered job matches</p>
+            </div>
+
+            <!-- Upload Box -->
+            <div class="upload-container" id="uploadContainer">
+                <div class="upload-box" id="uploadBox">
+                    <div class="upload-icon-wrap">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h3>Drop your resume here</h3>
+                    <p>or click to browse your files</p>
+                    <span class="upload-hint">PDF format only • Max 10MB</span>
+                    <input type="file" id="fileInput" accept=".pdf" hidden>
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        <i class="fas fa-folder-open"></i> Browse Files
+                    </button>
+                </div>
+
+                <!-- File Selected State -->
+                <div class="file-selected" id="fileSelected" style="display:none">
+                    <div class="file-info">
+                        <i class="fas fa-file-pdf file-icon"></i>
+                        <div class="file-details">
+                            <span class="file-name" id="fileName">resume.pdf</span>
+                            <span class="file-size" id="fileSize">0 KB</span>
+                        </div>
+                        <button class="file-remove" onclick="removeFile()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <button class="analyze-btn" id="analyzeBtn" onclick="analyzeResume()">
+                        <i class="fas fa-magic"></i>
+                        Analyze My Resume
+                    </button>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div class="loading-state" id="loadingState" style="display:none">
+                <div class="loading-spinner"></div>
+                <h3 id="loadingText">Reading your resume...</h3>
+                <p>AI is analyzing your skills and finding best matches</p>
+                <div class="loading-steps">
+                    <div class="loading-step active" id="step1">
+                        <i class="fas fa-check-circle"></i> Reading PDF
+                    </div>
+                    <div class="loading-step" id="step2">
+                        <i class="fas fa-circle"></i> Extracting Skills
+                    </div>
+                    <div class="loading-step" id="step3">
+                        <i class="fas fa-circle"></i> Matching Jobs
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="resultsSection" style="display:none">
+
+                <!-- Profile Card -->
+                <div class="result-card profile-result">
+                    <div class="card-header">
+                        <h3><i class="fas fa-user-circle"></i> Your Profile</h3>
+                        <span class="resume-score" id="resumeScore">Score: 0/100</span>
+                    </div>
+                    <div class="profile-grid">
+                        <div class="profile-item">
+                            <label>🎓 Education</label>
+                            <span id="profileEducation">—</span>
+                        </div>
+                        <div class="profile-item">
+                            <label>⏱️ Experience</label>
+                            <span id="profileExperience">—</span>
+                        </div>
+                        <div class="profile-item">
+                            <label>💼 Previous Roles</label>
+                            <span id="profileRoles">—</span>
+                        </div>
+                        <div class="profile-item">
+                            <label>📝 Summary</label>
+                            <span id="profileSummary">—</span>
+                        </div>
+                    </div>
+                    <div class="skills-section">
+                        <label>🛠️ Detected Skills</label>
+                        <div class="skills-wrap" id="detectedSkills"></div>
+                    </div>
+                </div>
+
+                <!-- Resume Tips -->
+                <div class="result-card tips-card">
+                    <div class="card-header">
+                        <h3><i class="fas fa-lightbulb"></i> Resume Improvement Tips</h3>
+                    </div>
+                    <div id="resumeTips"></div>
+                    <div class="strong-points" id="strongPoints"></div>
+                </div>
+
+                <!-- Job Matches -->
+                <div class="result-card jobs-result">
+                    <div class="card-header">
+                        <h3><i class="fas fa-briefcase"></i> Top Job Matches</h3>
+                        <span id="jobCount" class="job-count">0 matches found</span>
+                    </div>
+
+                    <!-- Filter -->
+                    <div class="filter-bar">
+                        <label>Minimum Match:</label>
+                        <input type="range" id="matchFilter" min="0" max="100" value="0" oninput="filterJobs(this.value)">
+                        <span id="filterValue">0%</span>
+                    </div>
+
+                    <div id="jobsList"></div>
+                </div>
+
+                <!-- Career Roadmap -->
+                <div class="result-card roadmap-card" id="roadmapCard" style="display:none">
+                    <div class="card-header">
+                        <h3><i class="fas fa-road"></i> Your 3-Month Career Roadmap</h3>
+                    </div>
+                    <div id="roadmapContent"></div>
+                </div>
+
+                <!-- Download -->
+                <div class="download-section">
+                    <button class="download-btn" onclick="downloadReport()">
+                        <i class="fas fa-download"></i> Download Full Report
+                    </button>
+                    <button class="reset-btn" onclick="resetAll()">
+                        <i class="fas fa-redo"></i> Analyze Another Resume
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Why Choose Us</span>
+                <h2>Powerful Features</h2>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Smart Job Matching</h3>
+                    <p>AI compares your skills with 20+ job categories and shows match percentage</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Skill Gap Analysis</h3>
+                    <p>Know exactly which skills you need to learn for your dream job</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🗺️</div>
+                    <h3>Career Roadmap</h3>
+                    <p>Get a personalized 3-month plan to reach your career goals</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💡</div>
+                    <h3>Resume Feedback</h3>
+                    <p>AI reviews your resume and gives specific improvement tips</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Instant Results</h3>
+                    <p>Get complete analysis in under 30 seconds — no waiting</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>100% Private</h3>
+                    <p>Your resume is never stored. Complete privacy guaranteed</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section class="contact-section" id="contact">
+        <div class="container">
+            <div class="section-header">
+                <span class="section-tag">Get In Touch</span>
+                <h2>Contact Us</h2>
+                <p>Have questions? We'd love to hear from you</p>
+            </div>
+            <div class="contact-grid">
+                <a href="tel:+918319586123" class="contact-card">
+                    <div class="contact-icon"><i class="fas fa-phone-alt"></i></div>
+                    <h3>Company Phone</h3>
+                    <p>+91 83195 86123</p>
+                </a>
+                <a href="mailto:Rhtvs32@gmail.com" class="contact-card">
+                    <div class="contact-icon"><i class="fas fa-envelope"></i></div>
+                    <h3>Personal Email</h3>
+                    <p>Rhtvs32@gmail.com</p>
+                </a>
+                <a href="https://www.ibexink.com/" target="_blank" class="contact-card">
+                    <div class="contact-icon"><i class="fas fa-building"></i></div>
+                    <h3>Company Website</h3>
+                    <p>www.ibexink.com</p>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <span>🤖 AI Job Matcher Pro</span>
+                    <p>Helping people find their perfect career with AI</p>
+                </div>
+                <div class="footer-links">
+                    <a href="/">Home</a>
+                    <a href="/about">About</a>
+                    <a href="#features">Features</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>© 2026 AI Job Matcher Pro — Made with ❤️ using Flask + Groq AI</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+</body>
+</html>

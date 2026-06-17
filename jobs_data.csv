@@ -1,0 +1,21 @@
+job_title,required_skills,description,salary_range,category
+Data Analyst,Python SQL Excel Tableau PowerBI Statistics,Analyze data and create business reports,₹4L-₹12L,Technology
+Python Developer,Python Django Flask REST API Git JavaScript,Build web applications and APIs,₹5L-₹15L,Technology
+Machine Learning Engineer,Python MachineLearning TensorFlow Scikitlearn Statistics DeepLearning,Build and deploy ML models,₹8L-₹25L,Technology
+Web Developer,HTML CSS JavaScript React Nodejs MongoDB Git,Build responsive websites,₹3L-₹12L,Technology
+Data Scientist,Python R Statistics MachineLearning SQL Visualization,Extract insights from data,₹6L-₹20L,Technology
+Business Analyst,Excel SQL PowerBI Communication ProblemSolving Agile,Bridge business and technology,₹4L-₹14L,Business
+DevOps Engineer,Linux Docker Kubernetes AWS CICD Git Terraform,Manage infrastructure,₹6L-₹20L,Technology
+UI UX Designer,Figma AdobeXD Wireframing UserResearch Prototyping CSS,Design user interfaces,₹3L-₹12L,Design
+Project Manager,Communication Leadership Agile Scrum JIRA ProblemSolving,Manage tech projects,₹6L-₹20L,Management
+Cloud Engineer,AWS Azure GCP Terraform Linux Networking Docker,Build cloud infrastructure,₹7L-₹22L,Technology
+Digital Marketer,SEO SEM GoogleAds SocialMedia ContentMarketing Analytics,Drive online growth,₹3L-₹10L,Marketing
+Content Writer,Writing SEO Research WordPress SocialMedia Editing,Create engaging content,₹2L-₹8L,Creative
+Graphic Designer,Photoshop Illustrator Figma Canva Typography Branding,Create visual content,₹2L-₹8L,Design
+HR Manager,Recruitment Communication Excel HRMS Leadership Interviewing,Manage human resources,₹4L-₹12L,HR
+Sales Manager,Communication Negotiation CRM Leadership Excel Presentation,Drive sales growth,₹4L-₹15L,Sales
+Cybersecurity Analyst,NetworkSecurity Linux Python Firewall EthicalHacking SIEM,Protect systems,₹6L-₹20L,Technology
+Mobile App Developer,Flutter React-Native Android iOS Dart JavaScript,Build mobile apps,₹5L-₹18L,Technology
+Database Administrator,SQL MySQL PostgreSQL Oracle MongoDB Backup,Manage databases,₹5L-₹15L,Technology
+Financial Analyst,Excel Finance Accounting PowerBI SQL Forecasting,Analyze financial data,₹4L-₹14L,Finance
+Product Manager,Agile Communication Roadmap Analytics UserResearch Leadership,Lead product development,₹8L-₹25L,Management

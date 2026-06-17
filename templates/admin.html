@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard — AI Job Matcher Pro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        .admin-table th {
+            text-align: left;
+            padding: 10px 12px;
+            color: rgba(255,255,255,0.4);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .admin-table td {
+            padding: 12px;
+            color: rgba(255,255,255,0.8);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .admin-table tr:hover td { background: rgba(255,255,255,0.02); }
+        .table-wrap { overflow-x: auto; }
+        .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 2rem; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <div class="logo-icon">🤖</div>
+                <span class="logo-text">AI Job Matcher <span class="pro-badge">PRO</span></span>
+            </div>
+            <div class="nav-links">
+                <a href="/">Home</a>
+                <a href="/admin">Admin</a>
+                <a href="/logout">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <section style="padding: 8rem 0 4rem;">
+        <div class="container">
+
+            <div class="section-header" style="text-align:left; margin-bottom:2rem;">
+                <span class="section-tag">Admin Panel</span>
+                <h2>Dashboard Overview</h2>
+            </div>
+
+            <div class="stat-row">
+                <div class="stat-card">
+                    <div class="stat-num">{{ stats.total_users }}</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num">{{ stats.total_resumes }}</div>
+                    <div class="stat-label">Resumes Analyzed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num">{{ stats.today_users }}</div>
+                    <div class="stat-label">New Today</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num">{{ stats.avg_match }}%</div>
+                    <div class="stat-label">Avg Match Score</div>
+                </div>
+            </div>
+
+            <div class="result-card" style="margin-bottom: 2rem;">
+                <div class="card-header">
+                    <h3><i class="fas fa-users"></i> Registered Users</h3>
+                    <span class="job-count">{{ users|length }} users</span>
+                </div>
+                <div class="table-wrap">
+                    <table class="admin-table">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Joined</th>
+                            <th>Last Login</th>
+                            <th>Logins</th>
+                        </tr>
+                        {% for user in users %}
+                        <tr>
+                            <td>{{ user[0] }}</td>
+                            <td>{{ user[1] }}</td>
+                            <td>{{ user[2] }}</td>
+                            <td>{{ user[3] or '—' }}</td>
+                            <td>{{ user[4] }}</td>
+                            <td>{{ user[5] or 'Never' }}</td>
+                            <td>{{ user[6] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+
+            <div class="result-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-file-alt"></i> Resume Analysis History</h3>
+                    <span class="job-count">{{ resumes|length }} analyses</span>
+                </div>
+                <div class="table-wrap">
+                    <table class="admin-table">
+                        <tr>
+                            <th>ID</th>
+                            <th>User Email</th>
+                            <th>Education</th>
+                            <th>Experience</th>
+                            <th>Top Job Match</th>
+                            <th>Match %</th>
+                            <th>Date</th>
+                        </tr>
+                        {% for resume in resumes %}
+                        <tr>
+                            <td>{{ resume[0] }}</td>
+                            <td>{{ resume[1] }}</td>
+                            <td>{{ resume[3] }}</td>
+                            <td>{{ resume[4] }}</td>
+                            <td>{{ resume[5] }}</td>
+                            <td>{{ resume[6] }}%</td>
+                            <td>{{ resume[7] }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+</body>
+</html>

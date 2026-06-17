@@ -1,0 +1,5 @@
+"import pdfplumber" 
+"pdf = pdfplumber.open('C:/Users/itw/Downloads/Priya Tirole Professional Resume.pdf')" 
+"text = pdf.pages[0].extract_text()" 
+"print('Text length:', len(text) if text else 0)" 
+"print('Preview:', text[:300] if text else 'EMPTY')" 
