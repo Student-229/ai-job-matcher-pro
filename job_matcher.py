@@ -86,7 +86,8 @@ def match_jobs(resume_data):
                     matched.add(req_skill)
                 # Partial match (e.g., "machinelearning" vs "machine learning")
                 elif req_skill in user_skill or user_skill in req_skill:
-                    if len(req_skill) > 3:  # Avoid short matches
+                    # SAFE CHECK: convert to string before checking length
+                    if len(str(req_skill)) > 3:  # ← FIXED HERE
                         matched.add(req_skill)
         
         missing = required - matched
@@ -102,13 +103,13 @@ def match_jobs(resume_data):
             score = 30
         
         results.append({
-            "job_title": job["job_title"],
+            "job_title": str(job["job_title"]),  # ← SAFE convert to string
             "match_percent": score,
             "matched_skills": list(matched)[:10],
             "missing_skills": list(missing)[:10],
-            "description": job["description"],
-            "salary_range": job.get("salary_range", "Competitive"),
-            "category": job.get("category", "General")
+            "description": str(job.get("description", "")),  # ← SAFE convert
+            "salary_range": str(job.get("salary_range", "Competitive")),  # ← SAFE
+            "category": str(job.get("category", "General"))  # ← SAFE
         })
     
     # Score ke hisaab se sort karo
