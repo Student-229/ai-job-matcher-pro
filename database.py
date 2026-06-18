@@ -135,17 +135,18 @@ def verify_user(email, password):
             ''', (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), email))
             conn.commit()
             conn.close()
+            # Return 2 values: success (bool) and user_data (dict) or error message
             return True, {
                 'id': user[0],
                 'full_name': user[1],
                 'email': user[2],
-                'phone': user[4],
-                'subscription_status': user[6],
-                'subscription_end_date': user[7],
-                'free_analyses_used': user[8],
-                'created_at': user[5],
-                'last_login': user[9],
-                'login_count': user[10] + 1
+                'phone': user[4] if len(user) > 4 else '',
+                'subscription_status': user[6] if len(user) > 6 else 'free',
+                'subscription_end_date': user[7] if len(user) > 7 else None,
+                'free_analyses_used': user[8] if len(user) > 8 else 0,
+                'created_at': user[5] if len(user) > 5 else '',
+                'last_login': user[9] if len(user) > 9 else '',
+                'login_count': (user[10] if len(user) > 10 else 0) + 1
             }
         else:
             conn.close()
