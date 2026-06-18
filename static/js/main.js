@@ -1,3 +1,12 @@
+// ── Razorpay SDK Load (Add this at the very top) ──
+(function loadRazorpay() {
+    if (document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) return;
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    document.head.appendChild(script);
+})();
+
 // ── Global Data Store ──
 let globalData = null;
 let allJobs = [];
@@ -97,7 +106,13 @@ async function analyzeResume() {
             allJobs = data.matched_jobs;
             displayResults(data);
         } else {
-            showError(data.error || 'Something went wrong. Please try again.');
+            // Check if limit reached (subscription needed)
+            if (data.limit_reached || data.need_subscription) {
+                showSubscriptionModal();
+                showNotification('Free limit reached! Subscribe for unlimited access.', 'info');
+            } else {
+                showError(data.error || 'Something went wrong. Please try again.');
+            }
         }
 
     } catch (error) {
@@ -498,3 +513,168 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// ════════════════════════════════════════════════════════
+// 🔥 SUBSCRIPTION LOGIC (ADDED)
+// ════════════════════════════════════════════════════════
+
+let selectedPlan = null;
+let userEmail = null;
+
+function selectPlan(plan) {
+    selectedPlan = plan;
+    
+    // Highlight selected plan
+    document.querySelectorAll('.plan-card').forEach(card => {
+        card.style.borderColor = 'transparent';
+        card.style.background = 'rgba(255,255,255,0.05)';
+        card.style.boxShadow = 'none';
+    });
+    
+    // Find and highlight the selected card
+    const cards = document.querySelectorAll('.plan-card');
+    cards.forEach(card => {
+        if (card.getAttribute('onclick') && card.getAttribute('onclick').includes(plan)) {
+            card.style.borderColor = '#a78bfa';
+            card.style.background = 'rgba(102,126,234,0.15)';
+            card.style.boxShadow = '0 0 20px rgba(102,126,234,0.2)';
+        }
+    });
+}
+
+function showSubscriptionModal() {
+    const modal = document.getElementById('subscriptionModal');
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        // Reset selection
+        selectedPlan = null;
+        document.querySelectorAll('.plan-card').forEach(card => {
+            card.style.borderColor = 'transparent';
+            card.style.background = 'rgba(255,255,255,0.05)';
+            card.style.boxShadow = 'none';
+        });
+    }
+}
+
+function closeSubscriptionModal() {
+    const modal = document.getElementById('subscriptionModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+async function startPayment() {
+    if (!selectedPlan) {
+        showNotification('Please select a plan first!', 'error');
+        return;
+    }
+    
+    // Check if Razorpay is loaded
+    if (typeof Razorpay === 'undefined') {
+        showNotification('Payment system is loading. Please wait...', 'info');
+        // Try loading Razorpay again
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = function() {
+            startPayment(); // Retry after loading
+        };
+        document.head.appendChild(script);
+        return;
+    }
+    
+    // User email lo (session se ya prompt se)
+    userEmail = userEmail || document.getElementById('userEmail')?.value || '{{ user.email }}';
+    if (!userEmail || userEmail === '{{ user.email }}') {
+        userEmail = prompt('Enter your email to subscribe:');
+        if (!userEmail) return;
+    }
+    
+    const btn = document.getElementById('payBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    
+    try {
+        // Payment order create karo
+        const response = await fetch('/create-subscription', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                plan: selectedPlan,
+                email: userEmail
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            showNotification(data.error || 'Payment failed', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-lock"></i> Subscribe Now';
+            return;
+        }
+        
+        // Razorpay checkout open karo
+        const options = {
+            key: data.key,
+            amount: data.amount,
+            currency: data.currency,
+            order_id: data.order_id,
+            name: 'AI Job Matcher Pro',
+            description: `${data.plan_name} subscription plan`,
+            image: 'https://img.icons8.com/fluency/48/000000/cv.png',
+            prefill: {
+                email: userEmail
+            },
+            handler: function(response) {
+                // Payment successful → verify karo
+                fetch('/verify-payment', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        razorpay_order_id: response.razorpay_order_id,
+                        razorpay_payment_id: response.razorpay_payment_id,
+                        razorpay_signature: response.razorpay_signature,
+                        email: userEmail,
+                        plan: selectedPlan
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('🎉 Subscription activated! Unlimited access now.', 'success');
+                        closeSubscriptionModal();
+                        // Reload page to update state
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showNotification(data.error || 'Verification failed', 'error');
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-lock"></i> Subscribe Now';
+                    }
+                })
+                .catch(err => {
+                    showNotification('Verification failed. Please contact support.', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-lock"></i> Subscribe Now';
+                });
+            },
+            modal: {
+                ondismiss: function() {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-lock"></i> Subscribe Now';
+                    showNotification('Payment cancelled. Try again!', 'info');
+                }
+            }
+        };
+        
+        const rzp = new Razorpay(options);
+        rzp.open();
+        
+    } catch (error) {
+        console.error('Payment error:', error);
+        showNotification('Payment failed. Please try again.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-lock"></i> Subscribe Now';
+    }
+}

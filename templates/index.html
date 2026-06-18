@@ -334,6 +334,71 @@
         </div>
     </footer>
 
+    <!-- ════════════════════════════════════════════════════════ -->
+    <!-- 🔥 SUBSCRIPTION POP-UP (ADDED) -->
+    <!-- ════════════════════════════════════════════════════════ -->
+    <div id="subscriptionModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; backdrop-filter:blur(10px);">
+        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:#1a1a2e; border:1px solid rgba(255,255,255,0.1); border-radius:20px; padding:2.5rem; max-width:500px; width:90%; max-height:90vh; overflow-y:auto;">
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                <h2 style="color:white; font-size:1.5rem; margin:0;">🚀 Unlock Unlimited Analysis</h2>
+                <button onclick="closeSubscriptionModal()" style="background:none; border:none; color:rgba(255,255,255,0.5); font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <p style="color:rgba(255,255,255,0.6); margin-bottom:1.5rem; font-size:0.9rem;">
+                You've used all 3 free analyses. Subscribe now for unlimited access!
+            </p>
+            
+            <!-- Plans -->
+            <div id="plansContainer">
+                <!-- Monthly -->
+                <div class="plan-card" onclick="selectPlan('monthly')" style="background:rgba(255,255,255,0.05); border:2px solid transparent; border-radius:12px; padding:1rem; margin-bottom:1rem; cursor:pointer; transition:all 0.3s; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="color:white; font-size:1rem; margin:0;">📅 Monthly</h3>
+                        <p style="color:rgba(255,255,255,0.4); font-size:0.8rem; margin:0;">Flexible plan</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="color:#a78bfa; font-size:1.4rem; font-weight:700;">₹299</span>
+                        <span style="color:rgba(255,255,255,0.3); font-size:0.75rem;">/mo</span>
+                    </div>
+                </div>
+                
+                <!-- Quarterly -->
+                <div class="plan-card" onclick="selectPlan('quarterly')" style="background:rgba(255,255,255,0.05); border:2px solid transparent; border-radius:12px; padding:1rem; margin-bottom:1rem; cursor:pointer; transition:all 0.3s; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <h3 style="color:white; font-size:1rem; margin:0;">📊 Quarterly</h3>
+                        <p style="color:rgba(255,255,255,0.4); font-size:0.8rem; margin:0;">Save ₹198</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="color:#a78bfa; font-size:1.4rem; font-weight:700;">₹699</span>
+                        <span style="color:rgba(255,255,255,0.3); font-size:0.75rem;">/3mo</span>
+                    </div>
+                </div>
+                
+                <!-- Yearly -->
+                <div class="plan-card" onclick="selectPlan('yearly')" id="yearlyPlan" style="background:linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15)); border:2px solid #667eea; border-radius:12px; padding:1rem; margin-bottom:1.5rem; cursor:pointer; transition:all 0.3s; position:relative; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="position:absolute; top:-10px; right:20px; background:linear-gradient(135deg, #667eea, #764ba2); color:white; font-size:0.6rem; font-weight:600; padding:2px 12px; border-radius:50px;">Best Value</span>
+                    <div>
+                        <h3 style="color:white; font-size:1rem; margin:0;">🌟 Yearly</h3>
+                        <p style="color:rgba(255,255,255,0.4); font-size:0.8rem; margin:0;">Save ₹1,589</p>
+                    </div>
+                    <div style="text-align:right;">
+                        <span style="color:#a78bfa; font-size:1.4rem; font-weight:700;">₹1,999</span>
+                        <span style="color:rgba(255,255,255,0.3); font-size:0.75rem;">/year</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pay Button -->
+            <button id="payBtn" onclick="startPayment()" style="width:100%; background:linear-gradient(135deg, #667eea, #764ba2); color:white; border:none; padding:14px; border-radius:12px; font-size:1rem; font-weight:600; cursor:pointer; transition:all 0.3s;">
+                <i class="fas fa-lock"></i> Subscribe Now
+            </button>
+            <p style="color:rgba(255,255,255,0.3); font-size:0.7rem; text-align:center; margin-top:0.8rem;">
+                🔒 Secure payment via Razorpay • Cancel anytime
+            </p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 
 </body>

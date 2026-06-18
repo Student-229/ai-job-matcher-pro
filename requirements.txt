@@ -1,7 +1,8 @@
 flask
 flask-cors
 pdfplumber
-groq
+groq==0.10.0
 python-dotenv
 gunicorn
 pandas
+razorpay

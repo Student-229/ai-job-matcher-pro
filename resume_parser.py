@@ -224,3 +224,74 @@ Resume:
             "score": 65,
             "strong_points": ["Has work experience", "Good communication skills"]
         }
+
+
+# ── ATS Score Functions ──
+
+def calculate_ats_score(resume_text, resume_data):
+    """Calculate ATS score based on resume quality"""
+    score = 0
+    max_score = 100
+    feedback = []
+    
+    # Check for contact info
+    if re.search(r'[\w\.-]+@[\w\.-]+\.\w+', resume_text):
+        score += 15
+    else:
+        feedback.append("❌ No email found")
+    
+    if re.search(r'\+\d{1,3}\s?\d{10}|[0-9]{10}', resume_text):
+        score += 10
+    else:
+        feedback.append("❌ No phone number found")
+    
+    # Check for skills
+    if resume_data.get('skills'):
+        skill_count = len(resume_data['skills'])
+        if skill_count >= 10:
+            score += 20
+        elif skill_count >= 5:
+            score += 15
+        elif skill_count >= 3:
+            score += 10
+        else:
+            score += 5
+    
+    # Check for education
+    if resume_data.get('education') and len(resume_data['education']) > 5:
+        score += 10
+    else:
+        feedback.append("❌ Education not specified")
+    
+    # Check for experience
+    if resume_data.get('experience_years') and 'year' in resume_data['experience_years'].lower():
+        score += 15
+    else:
+        feedback.append("❌ Experience not specified")
+    
+    # Check for quantifiable achievements
+    if re.search(r'\d+%|\d+\s?percent|\d+\s?years', resume_text):
+        score += 10
+    
+    # Check for certifications
+    if re.search(r'certified|certification|diploma|course', resume_text, re.IGNORECASE):
+        score += 10
+    
+    # Check for action verbs
+    action_verbs = ['managed', 'led', 'created', 'developed', 'designed', 'implemented', 'achieved', 'increased', 'reduced']
+    verbs_found = sum(1 for verb in action_verbs if re.search(rf'\b{verb}\b', resume_text, re.IGNORECASE))
+    score += min(verbs_found * 2, 10)
+    
+    return min(score, max_score)
+
+
+def calculate_ats_score_with_jd(job_description, user):
+    """ATS score against job description"""
+    # This will use AI to compare resume with JD
+    # For now, return a mock result
+    return {
+        'score': 75,
+        'matched_keywords': ['Python', 'SQL', 'Communication'],
+        'missing_keywords': ['Docker', 'AWS'],
+        'overall_feedback': 'Good match! Focus on adding cloud skills.'
+    }
