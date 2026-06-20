@@ -1,19 +1,20 @@
-// ── Razorpay SDK Load (Add this at the very top) ──
-(function loadRazorpay() {
-    if (document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]')) return;
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    document.head.appendChild(script);
-})();
-
 // ── Global Data Store ──
 let globalData = null;
 let allJobs = [];
+let currentUser = null;
 
 // ── File Upload Handling ──
 const fileInput = document.getElementById('fileInput');
 const uploadBox = document.getElementById('uploadBox');
+
+// Get current user from page
+function getCurrentUser() {
+    const userScript = document.querySelector('script[data-user]');
+    if (userScript) {
+        return JSON.parse(userScript.dataset.user);
+    }
+    return null;
+}
 
 // Drag and Drop
 uploadBox.addEventListener('dragover', (e) => {
@@ -54,13 +55,11 @@ function handleFileSelect(file) {
         return;
     }
 
-    // Show file info
     document.getElementById('fileName').textContent = file.name;
     document.getElementById('fileSize').textContent = formatFileSize(file.size);
     document.getElementById('uploadBox').style.display = 'none';
     document.getElementById('fileSelected').style.display = 'block';
 
-    // Store file
     fileInput._selectedFile = file;
 }
 
@@ -81,15 +80,12 @@ async function analyzeResume() {
         return;
     }
 
-    // Show loading
     document.getElementById('uploadContainer').style.display = 'none';
     document.getElementById('loadingState').style.display = 'block';
     document.getElementById('resultsSection').style.display = 'none';
 
-    // Animate loading steps
     animateLoadingSteps();
 
-    // Create form data
     const formData = new FormData();
     formData.append('resume', file);
 
@@ -101,18 +97,21 @@ async function analyzeResume() {
 
         const data = await response.json();
 
+        if (data.status === 'upgrade_required') {
+            // User exceeded free tier
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('uploadContainer').style.display = 'block';
+            openUpgradeModal();
+            showNotification('You\'ve used all free analyses. Please upgrade!', 'info');
+            return;
+        }
+
         if (data.success) {
             globalData = data;
             allJobs = data.matched_jobs;
             displayResults(data);
         } else {
-            // Check if limit reached (subscription needed)
-            if (data.limit_reached || data.need_subscription) {
-                showSubscriptionModal();
-                showNotification('Free limit reached! Subscribe for unlimited access.', 'info');
-            } else {
-                showError(data.error || 'Something went wrong. Please try again.');
-            }
+            showError(data.error || 'Something went wrong. Please try again.');
         }
 
     } catch (error) {
@@ -150,28 +149,20 @@ function animateLoadingSteps() {
 
 // ── Display Results ──
 function displayResults(data) {
-    // Hide loading, show results
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('resultsSection').style.display = 'block';
 
     const { resume_data, matched_jobs, feedback, skill_advice, roadmap } = data;
 
-    // ── Profile Section ──
-    document.getElementById('profileEducation').textContent =
-        resume_data.education || 'Not specified';
-    document.getElementById('profileExperience').textContent =
-        resume_data.experience_years || 'Not specified';
-    document.getElementById('profileRoles').textContent =
-        (resume_data.previous_roles || []).join(', ') || 'Not specified';
-    document.getElementById('profileSummary').textContent =
-        resume_data.summary || 'Professional with diverse skills';
+    document.getElementById('profileEducation').textContent = resume_data.education || 'Not specified';
+    document.getElementById('profileExperience').textContent = resume_data.experience_years || 'Not specified';
+    document.getElementById('profileRoles').textContent = (resume_data.previous_roles || []).join(', ') || 'Not specified';
+    document.getElementById('profileSummary').textContent = resume_data.summary || 'Professional with diverse skills';
 
-    // Resume Score
     if (feedback && feedback.score) {
         document.getElementById('resumeScore').textContent = `Score: ${feedback.score}/100`;
     }
 
-    // Skills
     const skillsWrap = document.getElementById('detectedSkills');
     skillsWrap.innerHTML = '';
     (resume_data.skills || []).forEach(skill => {
@@ -181,7 +172,6 @@ function displayResults(data) {
         skillsWrap.appendChild(span);
     });
 
-    // ── Resume Tips ──
     if (feedback) {
         const tipsContainer = document.getElementById('resumeTips');
         tipsContainer.innerHTML = '';
@@ -196,7 +186,6 @@ function displayResults(data) {
             `;
         });
 
-        // Strong points
         if (feedback.strong_points && feedback.strong_points.length > 0) {
             const strongContainer = document.getElementById('strongPoints');
             strongContainer.innerHTML = '<label>✅ Strong Points</label>';
@@ -206,17 +195,14 @@ function displayResults(data) {
         }
     }
 
-    // ── Job Matches ──
     document.getElementById('jobCount').textContent = `${matched_jobs.length} matches found`;
     renderJobs(matched_jobs, skill_advice);
 
-    // ── Career Roadmap ──
     if (roadmap && roadmap.month1) {
         document.getElementById('roadmapCard').style.display = 'block';
         renderRoadmap(roadmap);
     }
 
-    // Scroll to results
     document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -258,7 +244,6 @@ function renderJobs(jobs, topAdvice = '') {
             `<span class="skill-red">❌ ${s}</span>`
         ).join('') || '<span class="skill-green">🎉 Perfect Match!</span>';
 
-        // Show advice for top job
         const adviceHTML = (index === 0 && topAdvice) ? `
             <div class="advice-box">
                 <strong>💡 How to improve for this role:</strong>
@@ -316,7 +301,6 @@ function renderJobs(jobs, topAdvice = '') {
         `;
     });
 
-    // Animate progress bars
     setTimeout(() => {
         document.querySelectorAll('.progress-bar-fill').forEach(bar => {
             bar.style.width = bar.dataset.width + '%';
@@ -440,7 +424,6 @@ function resetAll() {
     document.getElementById('resultsSection').style.display = 'none';
     document.getElementById('roadmapCard').style.display = 'none';
 
-    // Reset loading steps
     ['step1', 'step2', 'step3'].forEach(id => {
         const el = document.getElementById(id);
         el.classList.remove('active', 'done');
@@ -457,6 +440,120 @@ function showError(message) {
     document.getElementById('uploadBox').style.display = 'block';
     document.getElementById('fileSelected').style.display = 'none';
     showNotification(message, 'error');
+}
+
+// ── UPGRADE MODAL FUNCTIONS ← NEW ← ──
+
+function openUpgradeModal() {
+    document.getElementById('upgradeModal').classList.remove('hidden');
+    loadSubscriptionPlans();
+}
+
+function closeUpgradeModal() {
+    document.getElementById('upgradeModal').classList.add('hidden');
+}
+
+async function loadSubscriptionPlans() {
+    try {
+        const response = await fetch('/get-plans');
+        const plans = await response.json();
+        
+        let html = '';
+        for (const [planId, plan] of Object.entries(plans)) {
+            const isPopular = planId === 'plan_3month';
+            html += `
+                <div class="plan-card ${isPopular ? 'popular' : ''}">
+                    ${isPopular ? '<div class="popular-badge">⭐ BEST VALUE</div>' : ''}
+                    <h3>${plan.name}</h3>
+                    <div class="plan-price">₹${plan.price}</div>
+                    <div class="plan-duration">${plan.duration_days} days access</div>
+                    <ul class="plan-features">
+                        ${plan.features.map(f => `<li>✅ ${f}</li>`).join('')}
+                    </ul>
+                    <button class="plan-btn" onclick="initiatePayment('${planId}', ${plan.price})">
+                        Subscribe Now
+                    </button>
+                </div>
+            `;
+        }
+        
+        document.getElementById('plansContainer').innerHTML = html;
+    } catch (error) {
+        console.error('Error loading plans:', error);
+        showNotification('Failed to load plans', 'error');
+    }
+}
+
+async function initiatePayment(planId, amount) {
+    try {
+        const orderResponse = await fetch('/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ plan_id: planId })
+        });
+        
+        const orderData = await orderResponse.json();
+        
+        if (orderData.status !== 'success') {
+            showNotification('Error creating order: ' + orderData.message, 'error');
+            return;
+        }
+        
+        const options = {
+            key: orderData.key,
+            amount: orderData.amount,
+            currency: 'INR',
+            name: 'AI Job Matcher Pro',
+            description: orderData.plan_name,
+            order_id: orderData.order_id,
+            handler: async function(response) {
+                await verifyPayment(response, planId);
+            },
+            prefill: {
+                email: document.body.dataset.userEmail || '',
+                contact: document.body.dataset.userPhone || ''
+            },
+            theme: {
+                color: '#667eea'
+            }
+        };
+        
+        const razorpay = new Razorpay(options);
+        razorpay.open();
+    } catch (error) {
+        console.error('Payment error:', error);
+        showNotification('Error initiating payment', 'error');
+    }
+}
+
+async function verifyPayment(response, planId) {
+    try {
+        const verifyResponse = await fetch('/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature,
+                plan_id: planId
+            })
+        });
+        
+        const result = await verifyResponse.json();
+        
+        if (result.status === 'success') {
+            closeUpgradeModal();
+            showNotification('✅ Payment successful! Your premium plan is now active.', 'success');
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            showNotification('❌ Payment verification failed: ' + result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Verification error:', error);
+        showNotification('Error verifying payment', 'error');
+    }
 }
 
 // ── Notification Toast ──
@@ -511,170 +608,176 @@ style.textContent = `
         from { opacity: 1; transform: translateX(0); }
         to { opacity: 0; transform: translateX(20px); }
     }
+    
+    /* Upgrade Modal Styles */
+    .upgrade-modal {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        backdrop-filter: blur(5px);
+    }
+    
+    .upgrade-modal.hidden {
+        display: none;
+    }
+    
+    .upgrade-modal-content {
+        background: rgba(10,10,15,0.95);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 24px;
+        padding: 2.5rem;
+        max-width: 1000px;
+        width: 90%;
+        max-height: 90vh;
+        overflow-y: auto;
+        backdrop-filter: blur(20px);
+        position: relative;
+    }
+    
+    .modal-close {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: rgba(255,255,255,0.08);
+        border: none;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        font-size: 24px;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-close:hover {
+        background: rgba(255,255,255,0.15);
+    }
+    
+    .modal-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .modal-header h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: white;
+        margin-bottom: 0.5rem;
+    }
+    
+    .modal-header p {
+        color: rgba(255,255,255,0.6);
+        font-size: 1rem;
+    }
+    
+    .plans-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .plan-card {
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 16px;
+        padding: 1.8rem;
+        text-align: center;
+        position: relative;
+        transition: all 0.3s;
+    }
+    
+    .plan-card:hover {
+        border-color: rgba(102,126,234,0.4);
+        transform: translateY(-4px);
+        box-shadow: 0 8px 32px rgba(102,126,234,0.15);
+    }
+    
+    .plan-card.popular {
+        border-color: rgba(102,126,234,0.6);
+        background: rgba(102,126,234,0.08);
+    }
+    
+    .popular-badge {
+        position: absolute;
+        top: -12px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        padding: 4px 16px;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+    
+    .plan-card h3 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: white;
+        margin-bottom: 0.5rem;
+    }
+    
+    .plan-price {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #667eea, #a78bfa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.2rem;
+    }
+    
+    .plan-duration {
+        font-size: 0.85rem;
+        color: rgba(255,255,255,0.5);
+        margin-bottom: 1rem;
+    }
+    
+    .plan-features {
+        list-style: none;
+        margin: 1rem 0;
+        text-align: left;
+    }
+    
+    .plan-features li {
+        font-size: 0.9rem;
+        color: rgba(255,255,255,0.7);
+        padding: 6px 0;
+    }
+    
+    .plan-btn {
+        width: 100%;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        margin-top: 1rem;
+    }
+    
+    .plan-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(102,126,234,0.4);
+    }
+    
+    .modal-footer {
+        text-align: center;
+        border-top: 1px solid rgba(255,255,255,0.06);
+        padding-top: 1.5rem;
+    }
 `;
 document.head.appendChild(style);
-
-// ════════════════════════════════════════════════════════
-// 🔥 SUBSCRIPTION LOGIC (ADDED)
-// ════════════════════════════════════════════════════════
-
-let selectedPlan = null;
-let userEmail = null;
-
-function selectPlan(plan) {
-    selectedPlan = plan;
-    
-    // Highlight selected plan
-    document.querySelectorAll('.plan-card').forEach(card => {
-        card.style.borderColor = 'transparent';
-        card.style.background = 'rgba(255,255,255,0.05)';
-        card.style.boxShadow = 'none';
-    });
-    
-    // Find and highlight the selected card
-    const cards = document.querySelectorAll('.plan-card');
-    cards.forEach(card => {
-        if (card.getAttribute('onclick') && card.getAttribute('onclick').includes(plan)) {
-            card.style.borderColor = '#a78bfa';
-            card.style.background = 'rgba(102,126,234,0.15)';
-            card.style.boxShadow = '0 0 20px rgba(102,126,234,0.2)';
-        }
-    });
-}
-
-function showSubscriptionModal() {
-    const modal = document.getElementById('subscriptionModal');
-    if (modal) {
-        modal.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-        // Reset selection
-        selectedPlan = null;
-        document.querySelectorAll('.plan-card').forEach(card => {
-            card.style.borderColor = 'transparent';
-            card.style.background = 'rgba(255,255,255,0.05)';
-            card.style.boxShadow = 'none';
-        });
-    }
-}
-
-function closeSubscriptionModal() {
-    const modal = document.getElementById('subscriptionModal');
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-    }
-}
-
-async function startPayment() {
-    if (!selectedPlan) {
-        showNotification('Please select a plan first!', 'error');
-        return;
-    }
-    
-    // Check if Razorpay is loaded
-    if (typeof Razorpay === 'undefined') {
-        showNotification('Payment system is loading. Please wait...', 'info');
-        // Try loading Razorpay again
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.onload = function() {
-            startPayment(); // Retry after loading
-        };
-        document.head.appendChild(script);
-        return;
-    }
-    
-    // User email lo (session se ya prompt se)
-    userEmail = userEmail || document.getElementById('userEmail')?.value || '{{ user.email }}';
-    if (!userEmail || userEmail === '{{ user.email }}') {
-        userEmail = prompt('Enter your email to subscribe:');
-        if (!userEmail) return;
-    }
-    
-    const btn = document.getElementById('payBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
-    
-    try {
-        // Payment order create karo
-        const response = await fetch('/create-subscription', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                plan: selectedPlan,
-                email: userEmail
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (!data.success) {
-            showNotification(data.error || 'Payment failed', 'error');
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-lock"></i> Subscribe Now';
-            return;
-        }
-        
-        // Razorpay checkout open karo
-        const options = {
-            key: data.key,
-            amount: data.amount,
-            currency: data.currency,
-            order_id: data.order_id,
-            name: 'AI Job Matcher Pro',
-            description: `${data.plan_name} subscription plan`,
-            image: 'https://img.icons8.com/fluency/48/000000/cv.png',
-            prefill: {
-                email: userEmail
-            },
-            handler: function(response) {
-                // Payment successful → verify karo
-                fetch('/verify-payment', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        razorpay_order_id: response.razorpay_order_id,
-                        razorpay_payment_id: response.razorpay_payment_id,
-                        razorpay_signature: response.razorpay_signature,
-                        email: userEmail,
-                        plan: selectedPlan
-                    })
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        showNotification('🎉 Subscription activated! Unlimited access now.', 'success');
-                        closeSubscriptionModal();
-                        // Reload page to update state
-                        setTimeout(() => location.reload(), 1500);
-                    } else {
-                        showNotification(data.error || 'Verification failed', 'error');
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="fas fa-lock"></i> Subscribe Now';
-                    }
-                })
-                .catch(err => {
-                    showNotification('Verification failed. Please contact support.', 'error');
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-lock"></i> Subscribe Now';
-                });
-            },
-            modal: {
-                ondismiss: function() {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-lock"></i> Subscribe Now';
-                    showNotification('Payment cancelled. Try again!', 'info');
-                }
-            }
-        };
-        
-        const rzp = new Razorpay(options);
-        rzp.open();
-        
-    } catch (error) {
-        console.error('Payment error:', error);
-        showNotification('Payment failed. Please try again.', 'error');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-lock"></i> Subscribe Now';
-    }
-}

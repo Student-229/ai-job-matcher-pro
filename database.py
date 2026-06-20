@@ -1,254 +1,210 @@
-import sqlite3
 import os
 from datetime import datetime, timedelta
-import json
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+import hashlib
 
-DB_PATH = 'users.db'
+# PostgreSQL URL (fallback to SQLite locally)
+DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///users.db')
+
+# Fix PostgreSQL URL format for SQLAlchemy
+if DATABASE_URL.startswith('postgresql://'):
+    DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg2://')
+
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+SessionLocal = sessionmaker(bind=engine)
+Base = declarative_base()
+
+# ── User Model ──
+class User(Base):
+    __tablename__ = 'users'
+    
+    id = Column(Integer, primary_key=True)
+    full_name = Column(String(100), nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
+    password = Column(String(256), nullable=False)
+    phone = Column(String(20))
+    
+    # ✨ NEW: Subscription Fields
+    resume_analysis_count = Column(Integer, default=0)  # Counter for free tier
+    is_premium = Column(Boolean, default=False)  # Premium status
+    plan_type = Column(String(20), default="free")  # free, plan_1month, plan_3month, plan_yearly
+    plan_expiry = Column(DateTime, nullable=True)  # When plan expires
+    payment_id = Column(String(100), nullable=True)  # Razorpay payment ID
+    subscription_date = Column(DateTime, nullable=True)  # When user subscribed
+    
+    created_at = Column(DateTime, default=datetime.now)
+    last_login = Column(DateTime)
+    login_count = Column(Integer, default=0)
+
+# ── Resume History Model ──
+class ResumeHistory(Base):
+    __tablename__ = 'resume_history'
+    
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer)
+    user_email = Column(String(100))
+    resume_text = Column(Text)
+    skills = Column(Text)
+    education = Column(String(200))
+    experience = Column(String(100))
+    top_job = Column(String(100))
+    match_percent = Column(Integer)
+    analyzed_at = Column(DateTime, default=datetime.now)
+
+# Create all tables
+Base.metadata.create_all(bind=engine)
 
 def init_database():
-    """Database aur tables banao"""
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    
-    # Users table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            full_name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            phone TEXT,
-            subscription_status TEXT DEFAULT 'free',
-            subscription_end_date TEXT,
-            free_analyses_used INTEGER DEFAULT 0,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            last_login TEXT,
-            login_count INTEGER DEFAULT 0
-        )
-    ''')
-    
-    # Resume usage table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS resume_usage (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            user_email TEXT NOT NULL,
-            analysis_date TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
-    
-    # Subscription plans table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS subscriptions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            plan_type TEXT NOT NULL,
-            razorpay_order_id TEXT,
-            razorpay_payment_id TEXT,
-            amount INTEGER,
-            currency TEXT DEFAULT 'INR',
-            status TEXT DEFAULT 'pending',
-            start_date TEXT,
-            end_date TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
-    
-    # Payments table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS payments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            razorpay_order_id TEXT,
-            razorpay_payment_id TEXT,
-            razorpay_signature TEXT,
-            amount INTEGER,
-            currency TEXT,
-            status TEXT DEFAULT 'pending',
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
-    
-    # Resume history table
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS resume_history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            user_email TEXT,
-            resume_text TEXT,
-            skills TEXT,
-            education TEXT,
-            experience TEXT,
-            top_job TEXT,
-            match_percent INTEGER,
-            analyzed_at TEXT DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
-    print("✅ Database initialized successfully!")
-
-# ─── User Functions ───
+    """Database initialize karo"""
+    Base.metadata.create_all(bind=engine)
+    print("Database initialized!")
 
 def create_user(full_name, email, password, phone=""):
     """Naya user banao"""
-    import hashlib
     hashed_password = hashlib.sha256(password.encode()).hexdigest()
     
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('''
-            INSERT INTO users (full_name, email, password, phone, created_at)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (full_name, email, hashed_password, phone, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-        conn.commit()
-        conn.close()
+        session = SessionLocal()
+        new_user = User(
+            full_name=full_name,
+            email=email,
+            password=hashed_password,
+            phone=phone,
+            created_at=datetime.now(),
+            is_premium=False,
+            plan_type="free",
+            resume_analysis_count=0
+        )
+        session.add(new_user)
+        session.commit()
+        session.close()
         return True, "Account created successfully!"
-    except sqlite3.IntegrityError:
-        return False, "Email already registered!"
     except Exception as e:
         return False, str(e)
 
 def verify_user(email, password):
     """User login verify karo"""
-    import hashlib
     hashed_password = hashlib.sha256(password.encode()).hexdigest()
     
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('SELECT * FROM users WHERE email=? AND password=?', (email, hashed_password))
-        user = c.fetchone()
+        session = SessionLocal()
+        user = session.query(User).filter(
+            User.email == email, 
+            User.password == hashed_password
+        ).first()
         
         if user:
-            # Update login count and last login
-            c.execute('''
-                UPDATE users 
-                SET last_login=?, login_count=login_count+1 
-                WHERE email=?
-            ''', (datetime.now().strftime("%Y-%m-%d %H:%M:%S"), email))
-            conn.commit()
-            conn.close()
-            # Return 2 values: success (bool) and user_data (dict) or error message
-            return True, {
-                'id': user[0],
-                'full_name': user[1],
-                'email': user[2],
-                'phone': user[4] if len(user) > 4 else '',
-                'subscription_status': user[6] if len(user) > 6 else 'free',
-                'subscription_end_date': user[7] if len(user) > 7 else None,
-                'free_analyses_used': user[8] if len(user) > 8 else 0,
-                'created_at': user[5] if len(user) > 5 else '',
-                'last_login': user[9] if len(user) > 9 else '',
-                'login_count': (user[10] if len(user) > 10 else 0) + 1
+            user.last_login = datetime.now()
+            user.login_count += 1
+            session.commit()
+            result = {
+                'id': user.id,
+                'full_name': user.full_name,
+                'email': user.email,
+                'phone': user.phone,
+                'is_premium': user.is_premium,
+                'plan_type': user.plan_type,
+                'resume_analysis_count': user.resume_analysis_count,
+                'plan_expiry': str(user.plan_expiry) if user.plan_expiry else None,
+                'created_at': str(user.created_at),
+                'last_login': str(user.last_login),
+                'login_count': user.login_count
             }
+            session.close()
+            return True, result
         else:
-            conn.close()
+            session.close()
             return False, "Invalid email or password!"
     except Exception as e:
         return False, str(e)
 
-def get_user_by_email(email):
-    """User ko email se find karo"""
+def get_user_by_id(user_id):
+    """User ID se user dhundho"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('SELECT * FROM users WHERE email=?', (email,))
-        user = c.fetchone()
-        conn.close()
-        
-        if user:
-            return {
-                'id': user[0],
-                'full_name': user[1],
-                'email': user[2],
-                'phone': user[4],
-                'subscription_status': user[6],
-                'subscription_end_date': user[7],
-                'free_analyses_used': user[8]
-            }
-        return None
+        session = SessionLocal()
+        user = session.query(User).filter(User.id == user_id).first()
+        session.close()
+        return user
     except Exception as e:
         print(f"Get user error: {e}")
         return None
 
-def update_user_subscription(email, plan_type, end_date):
-    """User subscription update karo"""
+def increment_analysis_count(user_id):
+    """Analysis counter badhao"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('''
-            UPDATE users 
-            SET subscription_status=?, subscription_end_date=?, free_analyses_used=0 
-            WHERE email=?
-        ''', (plan_type, end_date, email))
-        conn.commit()
-        conn.close()
+        session = SessionLocal()
+        user = session.query(User).filter(User.id == user_id).first()
+        if user:
+            user.resume_analysis_count += 1
+            session.commit()
+        session.close()
         return True
     except Exception as e:
-        print(f"Update subscription error: {e}")
+        print(f"Increment count error: {e}")
         return False
 
-def can_user_analyze(user_id, email):
-    """Check karo user analysis kar sakta hai ya nahi"""
-    
-    # Check if user exists
-    user = get_user_by_email(email)
-    if not user:
-        return False, "User not found"
-    
-    # Agar subscription active hai
-    if user['subscription_status'] != 'free':
-        end_date = user.get('subscription_end_date')
-        if end_date:
-            try:
-                end_dt = datetime.fromisoformat(end_date)
-                if end_dt > datetime.now():
-                    return True, "Subscribed", 'subscribed'
-            except:
-                pass
-    
-    # Free users ke liye 3 analyses allowed
-    if user['free_analyses_used'] < 3:
-        # Increment counter
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('''
-            UPDATE users 
-            SET free_analyses_used = free_analyses_used + 1 
-            WHERE email=?
-        ''', (email,))
-        conn.commit()
-        conn.close()
-        
-        # Log usage
-        log_resume_usage(user_id, email)
-        
-        return True, f"Free analysis {user['free_analyses_used'] + 1}/3", 'free'
-    
-    return False, "Subscription required", 'limit_reached'
-
-def log_resume_usage(user_id, email):
-    """Resume analysis usage log karo"""
+def activate_subscription(user_id, plan_type, payment_id):
+    """Subscription activate karo"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('''
-            INSERT INTO resume_usage (user_id, user_email, analysis_date)
-            VALUES (?, ?, ?)
-        ''', (user_id, email, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-        conn.commit()
-        conn.close()
-        return True
+        session = SessionLocal()
+        user = session.query(User).filter(User.id == user_id).first()
+        
+        if user:
+            # Plan duration determine karo
+            plan_durations = {
+                'plan_1month': 30,
+                'plan_3month': 90,
+                'plan_yearly': 365
+            }
+            
+            days = plan_durations.get(plan_type, 30)
+            
+            user.is_premium = True
+            user.plan_type = plan_type
+            user.payment_id = payment_id
+            user.subscription_date = datetime.now()
+            user.plan_expiry = datetime.now() + timedelta(days=days)
+            user.resume_analysis_count = 0  # Reset counter for premium
+            
+            session.commit()
+            session.close()
+            return True, {
+                'plan': plan_type,
+                'expiry': str(user.plan_expiry),
+                'message': 'Subscription activated successfully!'
+            }
+        else:
+            session.close()
+            return False, 'User not found'
     except Exception as e:
-        print(f"Log usage error: {e}")
-        return False
+        return False, str(e)
+
+def check_plan_expiry(user_id):
+    """Plan expiry check karo"""
+    try:
+        session = SessionLocal()
+        user = session.query(User).filter(User.id == user_id).first()
+        
+        if user and user.is_premium and user.plan_expiry:
+            if datetime.now() > user.plan_expiry:
+                # Plan expire ho gaya
+                user.is_premium = False
+                user.plan_type = "free"
+                user.resume_analysis_count = 0
+                session.commit()
+                session.close()
+                return True, "expired"
+            else:
+                session.close()
+                return True, "active"
+        
+        session.close()
+        return True, "free"
+    except Exception as e:
+        print(f"Check expiry error: {e}")
+        return False, "error"
 
 def save_resume_history(user_id, user_email, resume_text, resume_data, matched_jobs):
     """Resume analysis history save karo"""
@@ -257,80 +213,38 @@ def save_resume_history(user_id, user_email, resume_text, resume_data, matched_j
         top_job = matched_jobs[0]['job_title'] if matched_jobs else "N/A"
         top_match = matched_jobs[0]['match_percent'] if matched_jobs else 0
         
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('''
-            INSERT INTO resume_history 
-            (user_id, user_email, resume_text, skills, education, experience, top_job, match_percent, analyzed_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            user_id,
-            user_email,
-            resume_text[:2000],
-            json.dumps(resume_data.get('skills', [])),
-            resume_data.get('education', ''),
-            resume_data.get('experience_years', ''),
-            top_job,
-            top_match,
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        ))
-        conn.commit()
-        conn.close()
+        session = SessionLocal()
+        history = ResumeHistory(
+            user_id=user_id,
+            user_email=user_email,
+            resume_text=resume_text[:2000],
+            skills=json.dumps(resume_data.get('skills', [])),
+            education=resume_data.get('education', ''),
+            experience=resume_data.get('experience_years', ''),
+            top_job=top_job,
+            match_percent=top_match,
+            analyzed_at=datetime.now()
+        )
+        session.add(history)
+        session.commit()
+        session.close()
         return True
     except Exception as e:
         print(f"Save history error: {e}")
         return False
 
-# ─── Payment Functions ───
-
-def save_payment(user_id, order_id, payment_id, signature, amount, currency='INR'):
-    """Payment record save karo"""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('''
-            INSERT INTO payments (user_id, razorpay_order_id, razorpay_payment_id, 
-                                  razorpay_signature, amount, currency, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (user_id, order_id, payment_id, signature, amount, currency, 'success', 
-              datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        print(f"Save payment error: {e}")
-        return False
-
-def save_subscription(user_id, plan_type, order_id, payment_id, amount, end_date):
-    """Subscription record save karo"""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('''
-            INSERT INTO subscriptions (user_id, plan_type, razorpay_order_id, 
-                                       razorpay_payment_id, amount, status, start_date, end_date, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (user_id, plan_type, order_id, payment_id, amount, 'active',
-              datetime.now().strftime("%Y-%m-%d %H:%M:%S"), end_date,
-              datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-        conn.commit()
-        conn.close()
-        return True
-    except Exception as e:
-        print(f"Save subscription error: {e}")
-        return False
-
-# ─── Admin Functions ───
-
 def get_all_users():
     """Admin ke liye sab users"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('SELECT id, full_name, email, phone, subscription_status, free_analyses_used, created_at, last_login FROM users ORDER BY created_at DESC')
-        users = c.fetchall()
-        conn.close()
-        return users
+        session = SessionLocal()
+        users = session.query(User).order_by(User.created_at.desc()).all()
+        result = [(
+            u.id, u.full_name, u.email, u.phone, 
+            str(u.created_at), str(u.last_login) if u.last_login else None, 
+            u.login_count, u.is_premium, u.plan_type
+        ) for u in users]
+        session.close()
+        return result
     except Exception as e:
         print(f"Get users error: {e}")
         return []
@@ -338,69 +252,36 @@ def get_all_users():
 def get_all_resumes():
     """Admin ke liye sab resume history"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('''
-            SELECT r.id, r.user_email, r.skills, r.education, 
-                   r.experience, r.top_job, r.match_percent, r.analyzed_at
-            FROM resume_history r
-            ORDER BY r.analyzed_at DESC
-            LIMIT 100
-        ''')
-        resumes = c.fetchall()
-        conn.close()
-        return resumes
+        session = SessionLocal()
+        resumes = session.query(ResumeHistory).order_by(ResumeHistory.analyzed_at.desc()).all()
+        result = [(
+            r.id, r.user_email, r.skills, r.education, 
+            r.experience, r.top_job, r.match_percent, str(r.analyzed_at)
+        ) for r in resumes]
+        session.close()
+        return result
     except Exception as e:
         print(f"Get resumes error: {e}")
-        return []
-
-def get_subscriptions():
-    """Admin ke liye sab subscriptions"""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
-        c.execute('''
-            SELECT s.id, u.email, s.plan_type, s.amount, s.status, s.start_date, s.end_date
-            FROM subscriptions s
-            JOIN users u ON s.user_id = u.id
-            ORDER BY s.created_at DESC
-        ''')
-        subs = c.fetchall()
-        conn.close()
-        return subs
-    except Exception as e:
-        print(f"Get subscriptions error: {e}")
         return []
 
 def get_stats():
     """Dashboard stats"""
     try:
-        conn = sqlite3.connect(DB_PATH)
-        c = conn.cursor()
+        session = SessionLocal()
         
-        c.execute('SELECT COUNT(*) FROM users')
-        total_users = c.fetchone()[0]
+        total_users = session.query(User).count()
+        total_resumes = session.query(ResumeHistory).count()
+        premium_users = session.query(User).filter(User.is_premium == True).count()
+        avg_match = session.query(ResumeHistory).all()
+        avg_match_percent = sum([r.match_percent for r in avg_match]) / len(avg_match) if avg_match else 0
         
-        c.execute('SELECT COUNT(*) FROM resume_history')
-        total_resumes = c.fetchone()[0]
-        
-        c.execute('SELECT COUNT(*) FROM users WHERE subscription_status != "free"')
-        paid_users = c.fetchone()[0]
-        
-        c.execute('SELECT SUM(amount) FROM payments WHERE status="success"')
-        total_revenue = c.fetchone()[0] or 0
-        
-        c.execute('SELECT COUNT(*) FROM users WHERE date(created_at) = date("now")')
-        today_users = c.fetchone()[0]
-        
-        conn.close()
+        session.close()
         return {
             'total_users': total_users,
             'total_resumes': total_resumes,
-            'paid_users': paid_users,
-            'total_revenue': total_revenue,
-            'today_users': today_users
+            'premium_users': premium_users,
+            'avg_match': round(avg_match_percent, 1)
         }
     except Exception as e:
         print(f"Stats error: {e}")
-        return {'total_users': 0, 'total_resumes': 0, 'paid_users': 0, 'total_revenue': 0, 'today_users': 0}
+        return {'total_users': 0, 'total_resumes': 0, 'premium_users': 0, 'avg_match': 0}

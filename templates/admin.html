@@ -8,32 +8,119 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .admin-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
         }
-        .admin-table th {
-            text-align: left;
-            padding: 10px 12px;
-            color: rgba(255,255,255,0.4);
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
             border-bottom: 1px solid rgba(255,255,255,0.08);
         }
-        .admin-table td {
-            padding: 12px;
-            color: rgba(255,255,255,0.8);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+        .admin-header h1 {
+            font-size: 1.8rem;
+            color: white;
         }
-        .admin-table tr:hover td { background: rgba(255,255,255,0.02); }
-        .table-wrap { overflow-x: auto; }
-        .stat-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 2rem; }
+        .logout-btn {
+            background: rgba(252,129,129,0.15);
+            border: 1px solid rgba(252,129,129,0.3);
+            color: #fc8181;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+        .logout-btn:hover {
+            background: rgba(252,129,129,0.25);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .stat-card h3 {
+            font-size: 0.8rem;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+        .stat-card .number {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #667eea;
+        }
+        .data-table {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+        .table-title {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            background: rgba(255,255,255,0.02);
+            padding: 1rem 1.5rem;
+            text-align: left;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        td {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.8);
+        }
+        tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .badge-premium {
+            background: rgba(72,187,120,0.2);
+            color: #68d391;
+            border: 1px solid rgba(72,187,120,0.4);
+        }
+        .badge-free {
+            background: rgba(102,126,234,0.2);
+            color: #a78bfa;
+            border: 1px solid rgba(102,126,234,0.4);
+        }
     </style>
 </head>
 <body>
-
     <nav class="navbar">
         <div class="nav-container">
             <div class="nav-logo">
@@ -42,103 +129,136 @@
             </div>
             <div class="nav-links">
                 <a href="/">Home</a>
-                <a href="/admin">Admin</a>
-                <a href="/logout">Logout</a>
+                <a href="/logout" style="color:#fc8181;">Logout</a>
             </div>
         </div>
     </nav>
 
-    <section style="padding: 8rem 0 4rem;">
-        <div class="container">
-
-            <div class="section-header" style="text-align:left; margin-bottom:2rem;">
-                <span class="section-tag">Admin Panel</span>
-                <h2>Dashboard Overview</h2>
-            </div>
-
-            <div class="stat-row">
-                <div class="stat-card">
-                    <div class="stat-num">{{ stats.total_users }}</div>
-                    <div class="stat-label">Total Users</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num">{{ stats.total_resumes }}</div>
-                    <div class="stat-label">Resumes Analyzed</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num">{{ stats.today_users }}</div>
-                    <div class="stat-label">New Today</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-num">{{ stats.avg_match }}%</div>
-                    <div class="stat-label">Avg Match Score</div>
-                </div>
-            </div>
-
-            <div class="result-card" style="margin-bottom: 2rem;">
-                <div class="card-header">
-                    <h3><i class="fas fa-users"></i> Registered Users</h3>
-                    <span class="job-count">{{ users|length }} users</span>
-                </div>
-                <div class="table-wrap">
-                    <table class="admin-table">
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Phone</th>
-                            <th>Joined</th>
-                            <th>Last Login</th>
-                            <th>Logins</th>
-                        </tr>
-                        {% for user in users %}
-                        <tr>
-                            <td>{{ user[0] }}</td>
-                            <td>{{ user[1] }}</td>
-                            <td>{{ user[2] }}</td>
-                            <td>{{ user[3] or '—' }}</td>
-                            <td>{{ user[4] }}</td>
-                            <td>{{ user[5] or 'Never' }}</td>
-                            <td>{{ user[6] }}</td>
-                        </tr>
-                        {% endfor %}
-                    </table>
-                </div>
-            </div>
-
-            <div class="result-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-file-alt"></i> Resume Analysis History</h3>
-                    <span class="job-count">{{ resumes|length }} analyses</span>
-                </div>
-                <div class="table-wrap">
-                    <table class="admin-table">
-                        <tr>
-                            <th>ID</th>
-                            <th>User Email</th>
-                            <th>Education</th>
-                            <th>Experience</th>
-                            <th>Top Job Match</th>
-                            <th>Match %</th>
-                            <th>Date</th>
-                        </tr>
-                        {% for resume in resumes %}
-                        <tr>
-                            <td>{{ resume[0] }}</td>
-                            <td>{{ resume[1] }}</td>
-                            <td>{{ resume[3] }}</td>
-                            <td>{{ resume[4] }}</td>
-                            <td>{{ resume[5] }}</td>
-                            <td>{{ resume[6] }}%</td>
-                            <td>{{ resume[7] }}</td>
-                        </tr>
-                        {% endfor %}
-                    </table>
-                </div>
-            </div>
-
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>📊 Admin Dashboard</h1>
         </div>
-    </section>
 
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Users</h3>
+                <div class="number">{{ stats.total_users }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Premium Users</h3>
+                <div class="number">{{ stats.premium_users }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Total Analyses</h3>
+                <div class="number">{{ stats.total_resumes }}</div>
+            </div>
+            <div class="stat-card">
+                <h3>Avg Match Score</h3>
+                <div class="number">{{ stats.avg_match }}%</div>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="data-table">
+            <div class="table-title">
+                👥 Registered Users ({{ users|length }})
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Joined</th>
+                        <th>Last Login</th>
+                        <th>Logins</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>#{{ user[0] }}</td>
+                        <td>{{ user[1] }}</td>
+                        <td>{{ user[2] }}</td>
+                        <td>{{ user[3] or '-' }}</td>
+                        <td>{{ user[4][:10] }}</td>
+                        <td>{{ user[5][:10] if user[5] else '-' }}</td>
+                        <td>{{ user[6] }}</td>
+                        <td>
+                            {% if user[7] %}
+                                <span class="badge badge-premium">💎 Premium ({{ user[8] }})</span>
+                            {% else %}
+                                <span class="badge badge-free">Free</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Resume History Table -->
+        <div class="data-table">
+            <div class="table-title">
+                📄 Resume Analysis History ({{ resumes|length }})
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>User Email</th>
+                        <th>Education</th>
+                        <th>Experience</th>
+                        <th>Top Job</th>
+                        <th>Match %</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for resume in resumes %}
+                    <tr>
+                        <td>#{{ resume[0] }}</td>
+                        <td>{{ resume[1] }}</td>
+                        <td>{{ resume[3] or '-' }}</td>
+                        <td>{{ resume[4] or '-' }}</td>
+                        <td>{{ resume[5] }}</td>
+                        <td>
+                            {% if resume[6] >= 70 %}
+                                <span style="color:#68d391;">{{ resume[6] }}% ✅</span>
+                            {% elif resume[6] >= 40 %}
+                                <span style="color:#f6ad55;">{{ resume[6] }}% ⚠️</span>
+                            {% else %}
+                                <span style="color:#fc8181;">{{ resume[6] }}% ❌</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ resume[7][:10] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <style>
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            table {
+                font-size: 0.75rem;
+            }
+            td, th {
+                padding: 0.75rem;
+            }
+        }
+    </style>
 </body>
 </html>
