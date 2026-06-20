@@ -164,9 +164,16 @@
                 const data = await response.json();
 
                 if (data.success) {
+                    console.log('✅ Login successful!');
+                    console.log('User data:', data.user);
+                    
                     successBox.textContent = 'Login successful! Redirecting...';
                     successBox.style.display = 'block';
-                    setTimeout(() => window.location.href = '/', 800);
+                    
+                    // ✨ FIX: Wait a moment before redirect
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 800);
                 } else {
                     errorBox.textContent = data.error || 'Login failed!';
                     errorBox.style.display = 'block';
@@ -174,6 +181,7 @@
                     btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
                 }
             } catch (err) {
+                console.error('Error:', err);
                 errorBox.textContent = 'Network error. Please try again.';
                 errorBox.style.display = 'block';
                 btn.disabled = false;

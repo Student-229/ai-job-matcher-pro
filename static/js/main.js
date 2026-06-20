@@ -7,14 +7,23 @@ let currentUser = null;
 const fileInput = document.getElementById('fileInput');
 const uploadBox = document.getElementById('uploadBox');
 
-// Get current user from page
-function getCurrentUser() {
-    const userScript = document.querySelector('script[data-user]');
-    if (userScript) {
-        return JSON.parse(userScript.dataset.user);
+// ✨ CHECK IF USER IS LOGGED IN
+function checkUserLogin() {
+    if (typeof currentUser === 'undefined' || !currentUser.id) {
+        console.error('User not authenticated');
+        return false;
     }
-    return null;
+    return true;
 }
+
+// Page load hote hi check karo
+document.addEventListener('DOMContentLoaded', function() {
+    if (!checkUserLogin()) {
+        console.error('User not authenticated');
+        return;
+    }
+    console.log('✅ User authenticated:', currentUser);
+});
 
 // Drag and Drop
 uploadBox.addEventListener('dragover', (e) => {
@@ -73,6 +82,12 @@ function removeFile() {
 
 // ── Analyze Resume ──
 async function analyzeResume() {
+    // ✨ FIX: Check user login
+    if (!checkUserLogin()) {
+        showNotification('Please login first!', 'error');
+        return;
+    }
+
     const file = fileInput._selectedFile || fileInput.files[0];
 
     if (!file) {
@@ -97,8 +112,14 @@ async function analyzeResume() {
 
         const data = await response.json();
 
+        // ✨ Handle different response statuses
+        if (response.status === 401) {
+            session.clear();
+            window.location.href = '/login';
+            return;
+        }
+
         if (data.status === 'upgrade_required') {
-            // User exceeded free tier
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('uploadContainer').style.display = 'block';
             openUpgradeModal();
@@ -115,6 +136,7 @@ async function analyzeResume() {
         }
 
     } catch (error) {
+        console.error('Error:', error);
         showError('Network error. Please check your connection and try again.');
     }
 }
@@ -510,8 +532,8 @@ async function initiatePayment(planId, amount) {
                 await verifyPayment(response, planId);
             },
             prefill: {
-                email: document.body.dataset.userEmail || '',
-                contact: document.body.dataset.userPhone || ''
+                email: currentUser?.email || '',
+                contact: currentUser?.phone || ''
             },
             theme: {
                 color: '#667eea'
@@ -722,62 +744,4 @@ style.textContent = `
     
     .plan-card h3 {
         font-size: 1.2rem;
-        font-weight: 600;
-        color: white;
-        margin-bottom: 0.5rem;
-    }
-    
-    .plan-price {
-        font-size: 2.5rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #667eea, #a78bfa);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 0.2rem;
-    }
-    
-    .plan-duration {
-        font-size: 0.85rem;
-        color: rgba(255,255,255,0.5);
-        margin-bottom: 1rem;
-    }
-    
-    .plan-features {
-        list-style: none;
-        margin: 1rem 0;
-        text-align: left;
-    }
-    
-    .plan-features li {
-        font-size: 0.9rem;
-        color: rgba(255,255,255,0.7);
-        padding: 6px 0;
-    }
-    
-    .plan-btn {
-        width: 100%;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 12px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s;
-        margin-top: 1rem;
-    }
-    
-    .plan-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(102,126,234,0.4);
-    }
-    
-    .modal-footer {
-        text-align: center;
-        border-top: 1px solid rgba(255,255,255,0.06);
-        padding-top: 1.5rem;
-    }
-`;
-document.head.appendChild(style);
+        font-weight:

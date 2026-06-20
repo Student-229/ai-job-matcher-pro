@@ -85,10 +85,18 @@ def login():
     success, result = verify_user(email, password)
     
     if success:
+        # ✨ FIX: Properly set session
         session['user'] = result
+        session['user_id'] = result['id']
         session['logged_in'] = True
+        session.permanent = False
+        
+        print(f"✅ User logged in: {email}")
+        print(f"✅ Session set: {session.get('user')}")
+        
         return jsonify({'success': True, 'user': result})
     else:
+        print(f"❌ Login failed for: {email}")
         return jsonify({'success': False, 'error': result})
 
 
@@ -155,7 +163,7 @@ def get_plans():
 @app.route('/create-order', methods=['POST'])
 def create_order():
     """Create Razorpay order"""
-    if 'user_id' not in session.get('user', {}):
+    if 'user' not in session or 'id' not in session.get('user', {}):
         return jsonify({'status': 'error', 'message': 'Please login first'}), 401
     
     data = request.get_json()
@@ -187,13 +195,14 @@ def create_order():
             'plan_price': plan['price']
         })
     except Exception as e:
+        print(f"Order creation error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
 
 @app.route('/verify-payment', methods=['POST'])
 def verify_payment():
     """Verify Razorpay payment"""
-    if 'user_id' not in session.get('user', {}):
+    if 'user' not in session or 'id' not in session.get('user', {}):
         return jsonify({'status': 'error', 'message': 'Please login first'}), 401
     
     data = request.get_json()
@@ -219,13 +228,18 @@ def verify_payment():
             session['user']['is_premium'] = True
             session['user']['plan_type'] = plan_id
             session['user']['plan_expiry'] = result['expiry']
+            session.modified = True
+            
+            print(f"✅ Payment verified for user: {user_id}")
             return jsonify({'status': 'success', 'message': 'Payment successful!', 'data': result})
         else:
             return jsonify({'status': 'error', 'message': result})
     
-    except razorpay.errors.SignatureVerificationError:
+    except razorpay.errors.SignatureVerificationError as e:
+        print(f"Signature verification failed: {e}")
         return jsonify({'status': 'error', 'message': 'Payment verification failed'})
     except Exception as e:
+        print(f"Payment verification error: {e}")
         return jsonify({'status': 'error', 'message': str(e)})
 
 
@@ -233,12 +247,27 @@ def verify_payment():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    if 'user_id' not in session.get('user', {}):
-        return jsonify({'success': False, 'error': 'Please login first!'}), 401
+    # ✨ FIX: Properly check user session
+    if 'user' not in session or not session.get('logged_in'):
+        return jsonify({
+            'success': False, 
+            'error': 'Please login first!',
+            'status': 'not_logged_in'
+        }), 401
     
     try:
         user = session.get('user')
         user_id = user['id']
+        
+        # Check if user exists in database
+        user_obj = get_user_by_id(user_id)
+        if not user_obj:
+            session.clear()
+            return jsonify({
+                'success': False, 
+                'error': 'Session expired. Please login again!',
+                'status': 'session_expired'
+            }), 401
         
         # Check plan expiry
         check_plan_expiry(user_id)
@@ -293,6 +322,8 @@ def analyze():
         updated_user = get_user_by_id(user_id)
         analyses_left = 3 - updated_user.resume_analysis_count if not updated_user.is_premium else -1
         
+        print(f"✅ Analysis complete for user: {user_id}, analyses_left: {analyses_left}")
+        
         return jsonify({
             'success': True,
             'resume_data': resume_data,
@@ -305,12 +336,13 @@ def analyze():
         })
         
     except Exception as e:
+        print(f"Analyze error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/job-advice', methods=['POST'])
 def job_advice():
-    if 'user_id' not in session.get('user', {}):
+    if 'user' not in session or not session.get('logged_in'):
         return jsonify({'success': False, 'error': 'Please login first!'}), 401
     
     try:
@@ -319,6 +351,7 @@ def job_advice():
         roadmap = get_career_roadmap(data.get('job_title', ''), data.get('current_skills', []), data.get('missing_skills', []))
         return jsonify({'success': True, 'advice': advice, 'roadmap': roadmap})
     except Exception as e:
+        print(f"Job advice error: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

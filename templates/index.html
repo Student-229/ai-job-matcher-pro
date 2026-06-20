@@ -8,6 +8,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <!-- ✨ USER DATA SCRIPT ← -->
+    <script>
+        // Current user data ko JavaScript mein available karo
+        const currentUser = {
+            id: {{ user.id }},
+            email: "{{ user.email }}",
+            full_name: "{{ user.full_name }}",
+            is_premium: {{ 'true' if user.is_premium else 'false' }},
+            plan_type: "{{ user.plan_type }}",
+            resume_analysis_count: {{ user.resume_analysis_count }}
+        };
+        console.log('✅ User loaded:', currentUser);
+    </script>
 </head>
 <body>
 
